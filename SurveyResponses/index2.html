@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" >
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Court Survey Responses -- Advanced Analytics</title>
+	
+	<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
+	<link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+	<!-- Stylesheet -->
+	<link rel="stylesheet" href="app.css">
+	
+	<!-- jQuery -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	
+	<!-- Materialize -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+	
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.3.0/lodash.min.js"></script>
+	
+	<script src="https://unpkg.com/vue@2.0.6/dist/vue.js"></script>
+	
+	<script src="promises.js"></script>
+	
+	<script src="vue-charts.js"></script>
+	<script src="vue-material/vue-material.js"></script>
+	
+</head>
+<body>
+
+<div id="app">
+	 <nav class="nav-extended">
+		<div class="nav-wrapper">
+			<a href="#" class="brand-logo">Court Survey Responses</a>
+			<a href="#" data-activates="mobile-demo" class="button-collapse"><i class="material-icons">menu</i></a>
+			<ul id="nav-mobile" class="right hide-on-med-and-down">
+				<li><a href="sass.html">Sass</a></li>
+			</ul>
+			<ul class="side-nav" id="mobile-demo">
+				<li><a href="sass.html">Sass</a></li>
+			</ul>
+		</div>
+		<div class="nav-content">
+			<ul class="tabs tabs-transparent">
+				<li class="tab"><a v-on:click="setPage('analytics')" v-bind:class="{active: page == 'analytics'}"><i class="material-icons right">assessment</i>Advanced Analytics</a></li>
+				<li class="tab"><a v-on:click="setPage('executive')" v-bind:class="{active: page == 'executive'}"><i class="material-icons right">print</i>Executive Summary</a></li>
+				<li class="tab"><a v-on:click="setPage('data')" v-bind:class="{active: page == 'data'}"><i class="material-icons right">list</i>Raw Data</a></li>
+			</ul>
+		</div>
+	</nav>
+	
+	<div class="container-fluid">
+		<div class="row section" id="header-section">
+			<div class="col s12">
+				<h4 class="white-text">Year:</h4>
+				<div class="row">
+					<div class="col s1" v-for="y in data.Years">
+						<span v-if="!(compareYears)" >
+							<input type="radio" :id="'yr' + y.Year" v-model="year" :value="y.Year" class="md-primary"><label :for="'yr' + y.Year" class="white-text">{{y.Year}}</label>
+						</span>
+						<span v-if="compareYears">
+							<input type="checkbox" :id="'comp' + y.Year" v-model="years" :value="y.Year" class="md-primary" :disabled="compareYearsChosen && !(isCompareYear(y.Year))"><label :for="'comp' + y.Year" class="white-text">{{y.Year}}</label>
+						</span>
+					</div>
+					<!--<div class="col s2">
+						<input type="checkbox" id="yrCompare" v-model="compareYears" class="md-primary"><label for="yrCompare" class="white-text">Compare</label>
+					</div>-->
+				</div>
+				<div class="row">
+					<div class="col s12">
+						<a class="btn waves-effect waves-light" v-on:click="clickShowFilters()" v-if="(page != 'executive')"><i class="material-icons right">settings</i>Filters</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row section" id="filter-section" v-show="showFilters">
+			<div class="col s12">
+				<h4 class="white-text">Filters</h4>
+				<p class="white-text">Check the responses you would like to see. For example, if you only want to see responses from people who appeared before a judge, you would check "Yes" on "Are you a party to a legal matter and appeared before a judge today?", uncheck "No" and "Include Blank Responses," and click "Apply Filters." The average score, number of responses, and graphs will be updated after the filters are applied. </p>
+				<form @submit.prevent="applyFilters">
+					<div class="row">
+						<div class="col s12 m4 l3 filter-col" v-for="question in filteringQuestions">
+							<div class="card filter-card">
+								<div class="card-content">
+									<div class="card-title">{{question.SURVEY_QUESTION_ENGLISH}}</div>
+									<div v-for="choice in getChoicesForQuestion(question.SURVEY_QUESTION_ID)" >
+										<input :id="'checkbox' + question.SURVEY_QUESTION_ID + '_' + choice.CHOICE_TEXT_ENGLISH" v-model="filters[question.SURVEY_QUESTION_ID][choice.SURVEY_QUESTION_CHOICE_ID]" :question-id="question.SURVEY_QUESTION_ID" :choice="choice.CHOICE_TEXT_ENGLISH" type="checkbox"/> <label :for="'checkbox' + question.SURVEY_QUESTION_ID + '_' + choice.CHOICE_TEXT_ENGLISH">{{choice.CHOICE_TEXT_ENGLISH}}</label>
+										<hr>
+									</div>
+									<input :id="'blank_checkbox' + question.SURVEY_QUESTION_ID" v-model="filters[question.SURVEY_QUESTION_ID]['BLANK']" type="checkbox"> <label :for="'blank_checkbox' + question.SURVEY_QUESTION_ID"> Include Blank Responses </label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<button class="btn waves-effect waves-light" type="submit" name="action">Apply Filters
+						<i class="material-icons right">send</i>
+					</button>
+				</form>
+			</div>
+		</div>
+		<div id="analytics" v-if="(page == 'analytics') && (!(compareYears) || (compareYears && compareYearsChosen))">
+			<div class="row section">
+				<div class="col s12" v-if="!(compareYears)">
+					<h5>Average Score (with filters) : <span v-if="doneCalculating">{{averageScore}}</span><span v-if="!(doneCalculating)"><img class="loading-logo" alt="Loading..." src="loading.gif"/></span></h5>
+					<h5>Number of responses (with filters) : <span v-if="doneCalculating">{{numberResponses}}</span><span v-if="!(doneCalculating)"><img class="loading-logo" alt="Loading..." src="loading.gif"/></span></h5>
+				</div>
+				<!--<div v-else>
+					<table>
+						<thead>
+							<tr>
+								<th class="col s4"></th>
+								<th v-for="yr in sortedYears" class="col s2"><h5>{{yr.year}}</h5></th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<th class="col s4"><h5>Average Score (with filters) :</h5></th>
+								<td v-for="yr in sortedYears" class="col s2"><h5>getAverageScore_byYear(yr.year)</h5></td>
+							</tr>
+							<tr>
+								<th class="col s4"><h5>Number of responses (with filters) :</h5></th>
+								<td v-for="yr in sortedYears" class="col s2"><h5>getResponsesLength(yr.year)</h5></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>-->
+			</div>
+			<div v-if="doneCalculating">
+				<div class="divider"></div>
+				<div class="row section">.
+					<div class="col s12">
+						<h2>Section 1: Access to the Court</h2>
+						<div class="col s12 m6" v-for="q in surveyQuestionsFromSection(1)">
+							<div v-if="q.SURVEY_QUESTION_TYPE === 'AGREE'">
+								<div class="card hoverable">
+									<div class="card-content">
+										<div class="card-title">
+											<h5 class="chart-card-title">{{q.SURVEY_QUESTION_ENGLISH}}</h5>
+										</div>
+										<h6>Average : {{getAgreeAverage(q.SURVEY_QUESTION_ID)}}</h6>
+										<vue-chart chart-type="ColumnChart" :columns="[{'type' : 'number', 'label' : 'Response'}, {'type' : 'number', 'label' : 'Number'}, {'role' : 'style', 'type' : 'string'}]" :rows="getAgreeRows(q.SURVEY_QUESTION_ID)" :options="agreeColumnChartOptions(q.SURVEY_QUESTION_ENGLISH)"></vue-chart>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="divider"></div>
+				<div class="row section">
+					<div class="col s12">
+						<h3>Section 2: Fairness</h3>
+						<div class="col m6 s12" v-for="q in surveyQuestionsFromSection(2)">
+							<div v-if="q.SURVEY_QUESTION_TYPE === 'AGREE'">
+								<div class="card hoverable">
+									<div class="card-content">
+										<div class="card-title">
+											<h5 class="chart-card-title">{{q.SURVEY_QUESTION_ENGLISH}}</h5>
+										</div>
+										<h6>Average : {{getAgreeAverage(q.SURVEY_QUESTION_ID)}}</h6>
+										<vue-chart chart-type="ColumnChart" :columns="[{'type' : 'number', 'label' : 'Response'}, {'type' : 'number', 'label' : 'Number'}, {'role' : 'style', 'type' : 'string'}]" :rows="getAgreeRows(q.SURVEY_QUESTION_ID)" :options="agreeColumnChartOptions(q.SURVEY_QUESTION_ENGLISH)"></vue-chart>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="divider"></div>
+				<div class="row section">
+					<div class="col s12">
+						<h3>Section 3: Background</h3>
+						<div class="row">
+							<div class="col l6 m12" v-for="q in surveyQuestionsFromSection(3)">
+							
+								<div class="card large hoverable pie-chart-card">
+									<div class="card-content">
+										<div class="card-title">
+											<h5 class="chart-card-title">{{q.SURVEY_QUESTION_ENGLISH}}</h5>
+										</div>
+										<div class="row">
+											<div class="col m4 s6">
+												<table class="bordered legend-table">
+													<tbody>
+														<tr v-for="(c, index) in getSurveyChoices_forQuestion(q.SURVEY_QUESTION_ID)">
+															<td><i class="material-icons left" v-bind:style="{color:colors[index]}">network_wifi</i></td>
+															<td>{{c.CHOICE_TEXT_ENGLISH}}</td>
+															<td class="right-align">{{getTotal_byQuestion_forChoice(q.SURVEY_QUESTION_ID, c.SURVEY_QUESTION_CHOICE_ID)}}</td>
+														</tr>
+														<tr>
+															<td><i class="material-icons left" v-bind:style="{color:colors[getSurveyChoices_forQuestion(q.SURVEY_QUESTION_ID).length]}">network_wifi</i></td>
+															<td>Blank</td>
+															<td class="right-align">{{getTotal_byQuestion_forNull(q.SURVEY_QUESTION_ID)}}</td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+											<div class="col m8 s6">
+												<vue-chart chart-type="PieChart" :columns="[{'type' : 'string', 'label' : 'Response'}, {'type' : 'number', 'label' : 'Number'}, {'role' : 'style', 'type' : 'string'}, {'role' : 'annotation', 'type': 'number'}]" :rows="getBackgroundRows(q.SURVEY_QUESTION_ID)" :options="backgroundPieChartOptions(q.SURVEY_QUESTION_ID)"></vue-chart>
+											</div>
+										</div>
+									</div>
+								</div>
+							
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div id="executive-summary" v-if="(page == 'executive')">
+			<div class="row">
+				<div class="col s12">
+					<div class="section executive-header">
+						<h5 class="center-align">Lewisville Municipal Court</h5>
+						<h5 class="center-align">{{year}} Public Satisfaction Survey</h5>
+
+						<h6>Executive Summary</h6>
+					</div>
+					<div class="section executive-averages">
+						<h6>Average Scores Per Question</h6>
+						<br>
+						
+						<table class="bordered">
+							<thead>
+								<tr>
+									<th class="center-align">Section 1: Access to the Court</th>
+									<th class="center-align">Average Response</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="q in surveyQuestionsFromSection(1)">
+									<td>{{q.SURVEY_QUESTION_ENGLISH}}</td>
+									<td class="center-align">{{getAgreeAveragePrint(q.SURVEY_QUESTION_ID)}}</td>
+								</tr>
+								<tr>
+									<th>Average Access Score (out of 100):</th>
+									<th class="center-align">{{averageSection(1)}}</th>
+								</tr>
+							</tbody>
+						</table>
+
+						<br><br>
+
+						<table class="bordered">
+							<thead>
+								<tr>
+									<th class="center-align">Section 2: Fairness</th>
+									<th class="center-align">Average Response</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="q in surveyQuestionsFromSection(2)">
+									<td>{{q.SURVEY_QUESTION_ENGLISH}}</td>
+									<td class="center-align">{{getAgreeAveragePrint(q.SURVEY_QUESTION_ID)}}</td>
+								</tr>
+								<tr>
+								</tr>
+								<tr>
+									<th>Average Fairness Score (out of 100):</th>
+									<th class="center-align">{{averageSection(2)}}</th>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					<div class="section executive-charts">
+						<h6 style="font-weight:bold;">Section 3: Background Information</h6>
+						<div class="row">
+							<div class="col s6" v-for="q in surveyQuestionsFromSection(3)">
+								<h6>{{q.SURVEY_QUESTION_ENGLISH}}</h6>
+
+								<div class="row">
+									<div class="col s6">
+										<table class="bordered legend-table">
+											<tbody>
+												<tr v-for="(c, index) in getSurveyChoices_forQuestion(q.SURVEY_QUESTION_ID)">
+													<td><i class="material-icons left" v-bind:style="{color:colors[index]}">network_wifi</i></td>
+													<td>{{c.CHOICE_TEXT_ENGLISH}}</td>
+													<td class="right-align">{{getTotal_byQuestion_forChoice(q.SURVEY_QUESTION_ID, c.SURVEY_QUESTION_CHOICE_ID)}}</td>
+												</tr>
+												<tr>
+													<td><i class="material-icons left" v-bind:style="{color:colors[getSurveyChoices_forQuestion(q.SURVEY_QUESTION_ID).length]}">network_wifi</i></td>
+													<td>Blank</td>
+													<td class="right-align">{{getTotal_byQuestion_forNull(q.SURVEY_QUESTION_ID)}}</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<div class="col s6">
+										<vue-chart chart-type="PieChart" :columns="[{'type' : 'string', 'label' : 'Response'}, {'type' : 'number', 'label' : 'Number'}, {'role' : 'style', 'type' : 'string'}, {'role' : 'annotation', 'type': 'number'}]" :rows="getBackgroundRows(q.SURVEY_QUESTION_ID)" :options="backgroundPieChartOptions(q.SURVEY_QUESTION_ID)"></vue-chart>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div id="raw-data" v-if="(page == 'data')">
+			<div class="row">
+				<div class="col s12">
+					<div class="section raw-data-header">
+						<h4 class="center-align">Raw Data: {{year}}</h4>
+						<table class="striped">
+							<thead>
+								<tr>
+									<th></th>
+									<th :colspan="surveyQuestionsFromSection(section).length">Section {{section}}</th>
+								</tr>
+								<tr>
+									<th style="border-right:solid 1px #d0d0d0">ID</th>
+									<th v-for="q in surveyQuestionsFromSection(1)" v-if="section==1">{{q.SURVEY_QUESTION_ENGLISH}}</th>
+									<th v-for="q in surveyQuestionsFromSection(2)" v-if="section==2">{{q.SURVEY_QUESTION_ENGLISH}}</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="(r,index) in filteredSurveyResponses">
+									<!--<th>{{year.toString().slice(2)}}-{{index}}</th>-->
+									<th style="border-right:solid 1px #d0d0d0">{{index}}</th>
+									<td v-for="q in surveyQuestionsFromSection(1)" v-if="section==1" class="center-align">{{r['Q' + q.SURVEY_QUESTION_ID]}}</td>
+									<td v-for="q in surveyQuestionsFromSection(2)" v-if="section==2" class="center-align">{{r['Q' + q.SURVEY_QUESTION_ID]}}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+	</div>
+</div>
+
+	<script>
+		Vue.config.debug = true;
+		Vue.config.devtools = true;
+		Vue.use(VueCharts);
+		
+		Vue.use(VueMaterial.default);
+		Vue.material.theme.register('default', {
+			primary : 'deep-purple',
+			accent : 'green'
+		})
+	</script>
+	<script src="app2.js"></script>
+</body>
+</html>
