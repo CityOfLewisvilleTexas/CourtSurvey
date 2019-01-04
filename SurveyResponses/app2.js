@@ -3,8 +3,9 @@ var app = new Vue({
 	data : {
 		calculatingFilters : false,
 		calculatingAvg: false,
-		compareYears: false,
+		compareYears: false,	// for comparison, not used yet
 		filters : { 16 : {}, 17 : {}, 18 : {}, 19 : {}, 20 : {}, 22 : {}},
+		excludeBlanks: false,
 		filteredSurveyResponses : [],
 		surveyChoices : [],
 		surveyQuestions : [],
@@ -42,28 +43,6 @@ var app = new Vue({
 			},
 			deep:true
 		},
-	},
-	created : function(){
-		this.getResponses();
-		this.getSurveyQuestions();
-		var yr = new Date().getFullYear();
-		var a = this.data.Years.findIndex(function(y){
-			return y.Year == yr;
-		});
-		if(a = -1){
-			yr = yr -1;
-		}
-		var b = this.data.Years.findIndex(function(y){
-			return y.Year == yr;
-		});
-		// Added 1/3/19 to show max year available if current and last year are not in database
-		if(b = -1){
-			this.data.Years.reduce(function(max, y){
-	            return y.Year > max ? y.Year : max;
-	        }, 0);
-		}
-		this.year = yr;
-		this.years = yr;
 	},
 	computed : {
 		doneCalculating: function(){
@@ -134,6 +113,28 @@ var app = new Vue({
 			
 			
 		},*/
+	},
+	created : function(){
+		this.getResponses();
+		this.getSurveyQuestions();
+		var yr = new Date().getFullYear();
+		var a = this.data.Years.findIndex(function(y){
+			return y.Year == yr;
+		});
+		if(a = -1){
+			yr = yr -1;
+		}
+		var b = this.data.Years.findIndex(function(y){
+			return y.Year == yr;
+		});
+		// Added 1/3/19 to show max year available if current and last year are not in database
+		if(b = -1){
+			this.data.Years.reduce(function(max, y){
+	            return y.Year > max ? y.Year : max;
+	        }, 0);
+		}
+		this.year = yr;
+		this.years = yr;	// not used yet
 	},
 	methods : {
 		clickShowFilters: function(){
@@ -471,6 +472,7 @@ var app = new Vue({
 			}
 			return options;
 		},
+		//eServices version did not have two separate methods
 		backgroundPieChartOptions : function(id){
 			var options =  {
 				backgroundColor: {fill:'transparent'},

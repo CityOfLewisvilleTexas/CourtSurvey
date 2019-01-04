@@ -10,7 +10,7 @@ var app = new Vue({
 		surveyQuestions : [],
 		data: {Responses:[], MultipleResponses:[], Years:[]},
 		//surveyResponses: [],
-		year: new Date().getFullYear(),
+		year: '',
 	},
 	watch: {
 		calculatingFilters: function(newVal, oldVal){
@@ -34,6 +34,23 @@ var app = new Vue({
 	created : function(){
 		this.getResponses();
 		this.getSurveyQuestions();
+		var yr = new Date().getFullYear();
+		var a = this.data.Years.findIndex(function(y){
+			return y.Year == yr;
+		});
+		if(a = -1){
+			yr = yr -1;
+		}
+		var b = this.data.Years.findIndex(function(y){
+			return y.Year == yr;
+		});
+		// Added 1/3/19 to show max year available if current and last year are not in database
+		if(b = -1){
+			this.data.Years.reduce(function(max, y){
+	            return y.Year > max ? y.Year : max;
+	        }, 0);
+		}
+		this.year = yr;
 	},
 	computed : {
 		doneCalculating: function(){

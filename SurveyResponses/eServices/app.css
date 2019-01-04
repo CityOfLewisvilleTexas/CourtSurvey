@@ -1,0 +1,108 @@
+.loading-logo{
+	height: 27px;
+}
+[type="radio"]:not(:checked)+label:before, [type="radio"]:not(:checked)+label:after, [type="checkbox"]:not(:checked)+label:before, [type="checkbox"]:not(:checked)+label:after {
+	border: 2px solid #fff;
+} {
+	border: 2px solid #fff;
+}
+.chart-card-title{
+	overflow-y : hidden;
+	text-overflow : ellipsis;
+	height : 54px;
+}
+body, #header-section, #filter-section{
+	background-color: #7B1FA2;
+}
+#analytics, #executive-summary{
+	background-color: #FFF;
+}
+th{
+	font-size: 1rem;
+}
+.legend-table td{
+	padding: 5px;
+}
+
+/*@media (max-width: 600px){
+	.filter-col{
+		clear:left;
+	}
+} 
+@media (min-width : 601px) and (max-width : 992px){
+	.filter-col:nth-child(3n+1){
+		clear:left;
+	}
+}
+@media (min-width : 993px){
+	.filter-col:nth-child(4n+1){
+		clear:left;
+	}
+}*/
+
+@page {
+	size: 8.5in 11in portrait;
+}
+
+@page :left {
+  margin-left: 0.7in;
+  margin-right: 0.7in;
+  margin-top: 0.75in;
+  margin-bottom: 0.75in;
+}
+
+@page :right {
+	margin-left: 0.7in;
+	margin-right: 0.7in;
+	margin-top: 0.75in;
+	margin-bottom: 0.75in;
+}
+
+h1, .executive-charts {
+  page-break-before: always;
+}
+h1, h2, h3, h4, h5 {
+  page-break-after: avoid;
+}
+table, figure {
+  page-break-inside: avoid;
+}
+
+@media print{
+	body{
+		background-color: #FFF;
+	}
+	#header-section, #filter-section{
+		display: none;
+	}
+	.container{
+		width: 100%;
+	}
+	td, th{
+		padding: 5px 5px;
+	}
+	.section:first-child{
+		padding-top:0px;
+	}
+	.legend-table td{
+		padding: 0px 5px 0px 0px;
+		font-size:.8rem;
+	}
+	i.left{
+		font-size:1rem;
+		vertical-align: middle;
+		margin-right: 2px;
+	}
+	.col.s1 {width:8%;  float:left;}
+	.col.s2 {width:16%; float:left;}
+	.col.s3 {width:25%; float:left;}
+	.col.s4 {width:33%; float:left;}
+	.col.s5 {width:42%; float:left;}
+	.col.s6 {width:50%; float:left;}
+	.col.s7 {width:58%; float:left;}
+	.col.s8 {width:66%; float:left;}
+	.col.s9 {width:75%; float:left;}
+	.col.s10{width:83%; float:left;}
+	.col.s11{width:92%; float:left;}
+	.col.s12{width:100%; float:left;}
+}
